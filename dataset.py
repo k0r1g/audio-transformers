@@ -55,7 +55,8 @@ class UrbanSoundDataset(Dataset):
         mel_spec = self.mel_transform(waveform) #mel scale makes frequency into log scale, but amplitude stays linear
         mel_spec = torch.log(mel_spec + 1e-9) #then we log the y axi
         
-        return mel_spec
+        
+        return mel_spec #shape: [batch_size, 1, n_mels, time_frames]
             
     def __len__(self):
         return len(self.dataset)
