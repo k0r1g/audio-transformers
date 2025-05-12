@@ -208,7 +208,7 @@ class UrbanSoundModel(nn.Module):
         #classification 
         x = self.classifier(x)
         
-        return x 
+        return x #[batch_size, num_classes]
     
 if __name__ == "__main__":
     from dataset import get_dataloaders
