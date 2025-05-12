@@ -1,0 +1,8 @@
+env_prompt: "({name}) "
+create_default_packages:
+  - ipykernel
+  - jupyter
+  - notebook
+custom_channels:
+  conda-forge: https://conda.anaconda.org/conda-forge
+channel_priority: flexible
