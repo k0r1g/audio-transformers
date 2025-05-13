@@ -5,7 +5,7 @@ from typing import Optional, Tuple, List, Dict, Any, Union
 
 class EmotionWhisperModel(WhisperPreTrainedModel):
     """Whisper + emotion classification head"""
-    def __init__(self, config: WhisperConfig, num_emotions_classes: int = 11):
+    def __init__(self, config: WhisperConfig, num_emotions_classes: int = 26):
         super().__init__(config)
         
         #load whisper model components 
@@ -105,7 +105,7 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
         return result 
        
 
-def load_emotion_whisper_model(num_emotion_classes=11):
+def load_emotion_whisper_model(num_emotion_classes=26):
     """Load pretrained whisper medium model and adds emotion classification head"""
     
     #load pretrained model and config 
