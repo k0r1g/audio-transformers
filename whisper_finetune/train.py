@@ -175,12 +175,11 @@ def train():
             #update progress bar 
             train_loss += loss.item()
             emotion_acc = train_emotion_correct / train_emotion_total if train_emotion_total > 0 else 0
-            progress_bar.set_postfix(
+            progress_bar.set_postfix({
                 "loss": loss.item(), 
                 "tr_loss": transcription_loss.item(), 
                 "emo_loss": emotion_loss.item() if total > 0 else 0, 
-                "emo_acc": f"{emotion_acc:.2f}"
-            )
+                "emo_acc": f"{emotion_acc:.2f}"})
             
             #calculate average training loss and accuracy 
             avg_train_loss = train_loss / len(train_loader)
