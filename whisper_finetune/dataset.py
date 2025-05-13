@@ -1,23 +1,21 @@
 import torch 
 from torch.utils.data import Dataset 
-from datasets import load_dataset 
+from datasets import load_dataset, DatasetDict
 from transformers import WhisperProcessor 
 from typing import Dict, List, Optional 
+import numpy as np # Added for np.random.choice
 
 
 class ExpressoEmotionDataset(Dataset):
     def __init__(self, 
-                 split: str = 'train', 
+                 dataset_split: torch.utils.data.Dataset, # Changed from split: str to dataset_split: Dataset
                  processor: Optional[WhisperProcessor] = None, 
                  sampling_rate: int = 16000,
-                 cache_dir: Optional[str] = None, 
-                 selected_styles: Optional[List[str]] = None):
-        self.split = split 
+                 selected_styles: Optional[List[str]] = None,
+                 split_name: str = "unknown"): # Added split_name for logging
         self.processor = processor 
-        self.sampling_rate = sampling_rate 
-
-        #load dataset 
-        self.dataset = load_dataset("ylacombe/expresso", split=split, cache_dir=cache_dir)
+        self.sampling_rate = sampling_rate
+        self.dataset = dataset_split # Use the passed dataset split
 
         #fitler dataset by selected styles if provided 
         if selected_styles is not None: 
@@ -27,7 +25,7 @@ class ExpressoEmotionDataset(Dataset):
         self.styles = sorted(list(set(self.dataset["style"])))
         self.style_to_idx = {style: idx for idx, style in enumerate(self.styles)}
         
-        print(f"Loaded {len(self.dataset)} samples from {split} split")
+        print(f"Loaded {len(self.dataset)} samples from {split_name} split") # Use split_name
         print(f"Number of styles: {len(self.styles)}")
     
     
@@ -89,13 +87,39 @@ class ExpressoEmotionDataset(Dataset):
         }
         
 
-def create_dataset(processor, selected_styles=None, cache_dir=None):
+def create_dataset(processor, selected_styles=None, cache_dir=None, test_size=0.1, val_size=0.1, data_percentage: float = 1.0):
+    #load dataset - ylacombe/expresso only has a 'train' split
+    full_dataset = load_dataset("ylacombe/expresso", split="train", cache_dir=cache_dir)
+
+    # If data_percentage is less than 1.0, select a random subset
+    if data_percentage < 1.0:
+        num_samples = int(len(full_dataset) * data_percentage)
+        # Ensure reproducibility if needed by setting a seed for np.random
+        # np.random.seed(42) # Optional: for reproducible subset selection
+        indices = np.random.choice(len(full_dataset), num_samples, replace=False)
+        full_dataset = full_dataset.select(indices)
+        print(f"Using {data_percentage*100:.2f}% of the data: {num_samples} samples.")
+
+    # Split train data into train and temp (val + test)
+    # (1 - test_size) for train, test_size for temp
+    train_test_split = full_dataset.train_test_split(test_size=test_size + val_size, shuffle=True, seed=42)
+    train_data = train_test_split["train"]
+    temp_data = train_test_split["test"]
+
+    # Split temp data into validation and test
+    # Calculate new val_size relative to temp_data size
+    # e.g. if temp_data is 20% of original, and we want val_size to be 10% of original,
+    # then val_size for temp_data.train_test_split is 0.1 / 0.2 = 0.5
+    val_test_split = temp_data.train_test_split(test_size=test_size / (test_size + val_size), shuffle=True, seed=42)
+    val_data = val_test_split["train"]
+    test_data = val_test_split["test"]
+    
     #create train dataset
     train_dataset = ExpressoEmotionDataset(
-        split="train", 
+        dataset_split=train_data, 
         processor=processor, 
-        selected_styles=selected_styles, 
-        cache_dir=cache_dir
+        selected_styles=selected_styles,
+        split_name="train"
     )
     
     #style mapping from train dataset for consistency 
@@ -104,17 +128,17 @@ def create_dataset(processor, selected_styles=None, cache_dir=None):
     
     #create validation dataset 
     val_dataset = ExpressoEmotionDataset(
-        split="validation", 
+        dataset_split=val_data, 
         processor=processor, 
-        selected_styles=styles, 
-        cache_dir=cache_dir
+        selected_styles=styles, # Use styles from training set for consistency
+        split_name="validation"
     )
     
     test_dataset = ExpressoEmotionDataset(
-        split="test", 
+        dataset_split=test_data, 
         processor=processor, 
-        selected_styles=styles, 
-        cache_dir=cache_dir
+        selected_styles=styles, # Use styles from training set for consistency
+        split_name="test"
     )
     
     return train_dataset, val_dataset, test_dataset, style_to_idx 
