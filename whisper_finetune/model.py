@@ -112,7 +112,7 @@ def load_emotion_whisper_model(num_emotion_classes=26):
     from transformers import WhisperConfig, WhisperProcessor #we need whisper proecessor for tokenization and feature extraction 
     
     #load pretrained whisper medium 
-    model_id = "openai/whisper-medium"
+    model_id = "openai/whisper-tiny"
     config = WhisperConfig.from_pretrained(model_id)
     processor = WhisperProcessor.from_pretrained(model_id)
     
