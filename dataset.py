@@ -1,8 +1,8 @@
 import numpy as np
 import torch 
-from torch.utils.data import Dataset
-import torchaudio.transforms as T
+from torch.utils.data import Dataset, DataLoader, Subset, random_split
 from datasets import load_dataset
+import torchaudio.transforms as T
 
 
 class UrbanSoundDataset(Dataset):
@@ -70,14 +70,35 @@ class UrbanSoundDataset(Dataset):
         mel_spec = self.process_audio(audio_array, orig_sr)
         return mel_spec, label
     
-    def get_dataloaders(self, batch_size=32, **dataset_kwargs):
-        train_dataset = UrbanSoundDataset(split="train", **dataset_kwargs)
-        test_dataset = UrbanSoundDataset(split="test", **dataset_kwargs)
-        
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-        
-        return train_loader, test_loader
+def get_dataloaders(batch_size=32, limit_samples=None, val_split=0.2, **dataset_kwargs):
+    # Load only the train dataset since there's no test split
+    full_dataset = UrbanSoundDataset(split="train", **dataset_kwargs)
+    
+    # Limit the number of samples if specified
+    if limit_samples is not None:
+        # Create subset with limited samples
+        indices = list(range(min(limit_samples, len(full_dataset))))
+        full_dataset = Subset(full_dataset, indices)
+        total_size = len(full_dataset)
+    else:
+        total_size = len(full_dataset)
+    
+    # Split into train and validation sets
+    val_size = int(val_split * total_size)
+    train_size = total_size - val_size
+    
+    train_dataset, test_dataset = random_split(
+        full_dataset, 
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(42)  # For reproducibility
+    )
+    
+    print(f"Dataset split: {train_size} training samples, {val_size} validation samples")
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+    
+    return train_loader, test_loader
 
 if __name__ == "__main__":
     train_loader, test_loader = get_dataloaders(

@@ -74,8 +74,12 @@ def train_classifier(args):
         batch_size=args.batch_size, 
         sr=args.sample_rate, 
         duration=args.duration, 
-        n_mels=args.n_mels
+        n_mels=args.n_mels,
+        limit_samples=args.limit_samples
     )
+    
+    print(f"Training with {len(train_loader.dataset)} training samples and {len(val_loader.dataset)} validation samples")
+
     
     #create model 
     model = UrbanSoundModel(
@@ -154,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_mels', type=int, default=64)
     parser.add_argument('--sample_rate', type=int, default=22050)
     parser.add_argument('--duration', type=float, default=4.0)
+    parser.add_argument('--limit_samples', type=int, default=None, help='Limit the number of samples in train and test sets')
     
     #model parameters 
     parser.add_argument('--conv_dim', type=int, default=128)

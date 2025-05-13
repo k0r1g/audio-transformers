@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F
+import numpy as np
 
 class Conv1dModule(nn.Module):
     def __init__(self, n_mels, conv_dim, kernel_size=3):
@@ -88,6 +89,8 @@ class CNNModule(nn.Module):
         x = self.global_pool(x) #[batchsize, 512, 1]
         x = x.view(x.size(0), -1) #flatten
         
+        return x
+        
         
 class UrbanSoundModel(nn.Module):
     def __init__(
@@ -141,13 +144,13 @@ class UrbanSoundModel(nn.Module):
         self.classifier = nn.Linear(self.cnn_module.output_dim, num_classes)
         
         #initialise weights 
-        self._init_weights()
+        # self._init_weights()
     
     #go back and review this 
     def _get_sinusoidal_embeddings(self, max_len, dim):
         half_dim = dim // 2 
         positions = torch.arange(max_len, dtype=torch.float32)
-        frequencies = torch.exp(-torch.arrang(half_dim, dtype=torch.float32) * (np.log(10000) / half_dim - 1))
+        frequencies = torch.exp(-torch.arrange(half_dim, dtype=torch.float32) * (np.log(10000) / half_dim))
         
         #create position embeddings 
         args = positions[:, None] * frequencies[None, :]
@@ -160,16 +163,16 @@ class UrbanSoundModel(nn.Module):
             
         return embedding 
     
-    #review this too 
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, (nn.Conv1d, nn.Linear)):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='gelu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-                elif isinstance(m, (nn.BatchNorm1d, nn.LayerNorm)):
-                    nn.init.constant_(m.weight, 1)
-                    nn.init.constant_(m.bias, 0)
+    # #review this too 
+    # def _init_weights(self):
+    #     for m in self.modules():
+    #         if isinstance(m, (nn.Conv1d, nn.Linear)):
+    #             nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='gelu')
+    #             if m.bias is not None:
+    #                 nn.init.constant_(m.bias, 0)
+    #             elif isinstance(m, (nn.BatchNorm1d, nn.LayerNorm)):
+    #                 nn.init.constant_(m.weight, 1)
+    #                 nn.init.constant_(m.bias, 0)
     
     def forward(self, x): 
         #input [batch_size, 1, n_mels, time_frames] ->> double check this, check the output from dataset.py
@@ -189,7 +192,7 @@ class UrbanSoundModel(nn.Module):
         
         #add position embeddings 
         seq_len = x.size(1) 
-        pos_emb = self.positional_embeddings[:seq_len]
+        pos_emb = self.position_embeddings[:seq_len]
         x = x + pos_emb
         
         #apply encoder blocks 
@@ -203,7 +206,7 @@ class UrbanSoundModel(nn.Module):
         x = x.transpose(1, 2) 
         
         #apply cnn module 
-        x = self.cnn_module_module(x)
+        x = self.cnn_module(x)
         
         #classification 
         x = self.classifier(x)
