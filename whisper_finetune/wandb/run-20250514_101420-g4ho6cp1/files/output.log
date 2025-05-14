@@ -1,0 +1,81 @@
+Using device: cuda
+Loading model and processor...
+Loading dataset...
+Using 10.00% of the data: 1161 samples.
+Loaded 928 samples from train split
+Number of styles: 10
+Filter: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 116/116 [00:03<00:00, 31.42 examples/s]
+Loaded 115 samples from validation split
+Number of styles: 10
+Filter: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████| 117/117 [00:00<00:00, 137.48 examples/s]
+Loaded 117 samples from test split
+Number of styles: 8
+Model: EmotionWhisperModel(
+  (whisper): WhisperModel(
+    (encoder): WhisperEncoder(
+      (conv1): Conv1d(80, 384, kernel_size=(3,), stride=(1,), padding=(1,))
+      (conv2): Conv1d(384, 384, kernel_size=(3,), stride=(2,), padding=(1,))
+      (embed_positions): Embedding(1500, 384)
+      (layers): ModuleList(
+        (0-3): 4 x WhisperEncoderLayer(
+          (self_attn): WhisperSdpaAttention(
+            (k_proj): Linear(in_features=384, out_features=384, bias=False)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (out_proj): Linear(in_features=384, out_features=384, bias=True)
+          )
+          (self_attn_layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (activation_fn): GELUActivation()
+          (fc1): Linear(in_features=384, out_features=1536, bias=True)
+          (fc2): Linear(in_features=1536, out_features=384, bias=True)
+          (final_layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    )
+    (decoder): WhisperDecoder(
+      (embed_tokens): Embedding(51865, 384, padding_idx=50257)
+      (embed_positions): WhisperPositionalEmbedding(448, 384)
+      (layers): ModuleList(
+        (0-3): 4 x WhisperDecoderLayer(
+          (self_attn): WhisperSdpaAttention(
+            (k_proj): Linear(in_features=384, out_features=384, bias=False)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (out_proj): Linear(in_features=384, out_features=384, bias=True)
+          )
+          (activation_fn): GELUActivation()
+          (self_attn_layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (encoder_attn): WhisperSdpaAttention(
+            (k_proj): Linear(in_features=384, out_features=384, bias=False)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (out_proj): Linear(in_features=384, out_features=384, bias=True)
+          )
+          (encoder_attn_layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (fc1): Linear(in_features=384, out_features=1536, bias=True)
+          (fc2): Linear(in_features=1536, out_features=384, bias=True)
+          (final_layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+      (layer_norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    )
+  )
+  (proj_out): Linear(in_features=384, out_features=51865, bias=False)
+  (emotion_classifier): Linear(in_features=384, out_features=26, bias=True)
+)
+Starting training...
+Epoch 1/10
+Training:   0%|                                                                                                                   | 0/186 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/root/audio-transformers/whisper_finetune/train.py", line 368, in <module>
+    train()
+  File "/root/audio-transformers/whisper_finetune/train.py", line 173, in train
+    timestamp_indices = batch["timestamp_indices"]
+KeyError: 'timestamp_indices'
+Traceback (most recent call last):
+  File "/root/audio-transformers/whisper_finetune/train.py", line 368, in <module>
+    train()
+  File "/root/audio-transformers/whisper_finetune/train.py", line 173, in train
+    timestamp_indices = batch["timestamp_indices"]
+KeyError: 'timestamp_indices'

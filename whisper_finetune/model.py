@@ -86,6 +86,7 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
         #extract segment representations and predict emotions 
         emotion_logits = None 
         if timestamp_indices is not None:
+            #segment level emotion classification (for inference)
             segment_reps = self._get_segment_representations(hidden_states, timestamp_indices)
             
             #predict emotions for each segment 
@@ -93,6 +94,11 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
             for seq_reps in segment_reps: 
                 seq_emotion_logits = self.emotion_classifier(seq_reps)
                 emotion_logits.append(seq_emotion_logits)
+        else:
+            #sequence level emotion classification (for training)
+            #global pooling over sequence length 
+            global_representation = torch.mean(hidden_states, dim=1) #[batch_size, d_model]
+            emotion_logits = self.emotion_classifier(global_representation) #[batch_size, num_emotions_classes]
                 
         #prepare output dictionary 
         result = {
@@ -105,7 +111,7 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
         return result 
        
 
-def load_emotion_whisper_model(num_emotion_classes=26):
+def load_emotion_whisper_model(num_emotions_classes=26):
     """Load pretrained whisper medium model and adds emotion classification head"""
     
     #load pretrained model and config 
@@ -117,7 +123,7 @@ def load_emotion_whisper_model(num_emotion_classes=26):
     processor = WhisperProcessor.from_pretrained(model_id)
     
     #intiialise our emotion-aware model with the config 
-    model = EmotionWhisperModel(config, num_emotion_classes=num_emotion_classes)
+    model = EmotionWhisperModel(config, num_emotions_classes=num_emotions_classes)
     
     #load pretrained weights for the whisper components 
     pretrained_model = WhisperModel.from_pretrained(model_id)

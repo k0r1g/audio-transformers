@@ -72,6 +72,10 @@ def parse_args():
     #Output parameters 
     parser.add_argument("--output_dir", type=str, default="./emotion_whisper_model") #check this remember we are in the whisper_finetune directory 
 
+    # W&B parameters
+    parser.add_argument("--wandb_project", type=str, default="emotion_whisper", help="Weights & Biases project name")
+    parser.add_argument("--wandb_entity", type=str, default=None, help="Weights & Biases entity (username or team name)")
+
     
     return parser.parse_args()
 
@@ -166,7 +170,6 @@ def train():
             #move batch to device 
             input_features = batch["input_features"].to(device)
             labels = batch["labels"].to(device)
-            timestamp_indices = batch["timestamp_indices"]
             emotion_labels = [el.to(device) for el in batch["emotion_labels"]]
             
             #zero gradients 
@@ -176,7 +179,7 @@ def train():
             outputs = model(
                 input_features=input_features, 
                 decoder_input_ids=labels[:, :-1] if labels.size(1) > 1 else None, #teacher forcing 
-                timestamp_indices=timestamp_indices
+                timestamp_indices=None #no timestamp indies during training
             )
             
             logits = outputs["logits"]
@@ -189,12 +192,15 @@ def train():
             #calculate transcription loss 
             transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))
             
-            #calculate emotion loss (per segment)
-            emotion_loss, emotion_correct, emotion_total = calculate_emotion_loss(emotion_logits, emotion_labels, emotion_loss_fn)
+            #calculate emotion loss total NOT per segment for training 
+            emotion_loss = emotion_loss_fn(emotion_logits, emotion_labels)
             
             #accumulate metrics 
+            preds = torch.argmax(emotion_logits, dim=1)
+            emotion_correct = (preds == emotion_labels).sum().item()
+            emotion_total = emotion_labels.size(0)
             train_emotion_correct += emotion_correct
-            train_emotion_total += emotion_total 
+            train_emotion_total += emotion_total
             train_transcription_loss += transcription_loss.item()
             train_emotion_loss += emotion_loss.item() if emotion_total > 0 else 0
             
@@ -238,14 +244,14 @@ def train():
                 #move batch to device 
                 input_features = batch["input_features"].to(device)
                 labels = batch["labels"].to(device)
-                timestamp_indices = batch["timestamp_indices"]
+                timestamp_indices = batch("timestamp_indices", None)
                 emotion_labels = [el.to(device) for el in batch["emotion_labels"]]
                 
                 #forward pass 
                 outputs = model(
                     input_features=input_features, 
                     decoder_input_ids=labels[:, :-1] if labels.size(1) > 1 else None, 
-                    timestamp_indices=timestamp_indices
+                    timestamp_indices=None
                 )
                 
                 logits = outputs["logits"]
@@ -259,13 +265,17 @@ def train():
                 transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))
                 
                 #calculate emotion loss and accuracy 
-                emotion_loss, emotion_correct, emotion_total = calculate_emotion_loss(emotion_logits, emotion_labels, emotion_loss_fn)
+                # emotion_loss, emotion_correct, emotion_total = calculate_emotion_loss(emotion_logits, emotion_labels, emotion_loss_fn)
+                emotion_loss = emotion_loss_fn(emotion_logits, emotion_labels)
                 
                 # accumulate metrics 
+                preds = torch.argmax(emotion_logits, dim=1)
+                emotion_correct = (preds == emotion_labels).sum().item()
+                emotion_total = emotion_labels.size(0)
                 val_emotion_correct += emotion_correct
-                val_emotion_total += emotion_total 
+                val_emotion_total += emotion_total
                 val_transcription_loss += transcription_loss.item()
-                val_emotion_loss += emotion_loss.item() if emotion_total > 0 else 0
+                val_emotion_loss += emotion_loss.item()
                 
                 #calculate total loss 
                 loss = transcription_loss + args.emotion_weight * emotion_loss 
