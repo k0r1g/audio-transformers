@@ -12,21 +12,36 @@ class ExpressoEmotionDataset(Dataset):
                  processor: Optional[WhisperProcessor] = None, 
                  sampling_rate: int = 16000,
                  selected_styles: Optional[List[str]] = None,
+                 style_to_idx: Optional[Dict[str, int]] = None,  # Added parameter to reuse style mapping
                  split_name: str = "unknown"): # Added split_name for logging
         self.processor = processor 
         self.sampling_rate = sampling_rate
         self.dataset = dataset_split # Use the passed dataset split
+        # Store the pad_token_id from the processor's tokenizer
+        if self.processor:
+            self.pad_token_id = self.processor.tokenizer.pad_token_id
+        else:
+            print("Warning: WhisperProcessor not provided to ExpressoEmotionDataset. Using default pad_token_id (50257). This might be incorrect.")
+            self.pad_token_id = 50257 
 
         #fitler dataset by selected styles if provided 
         if selected_styles is not None: 
             self.dataset = self.dataset.filter(lambda x: x["style"] in selected_styles)
 
-        #create style-emotion mapping 
-        self.styles = sorted(list(set(self.dataset["style"])))
-        self.style_to_idx = {style: idx for idx, style in enumerate(self.styles)}
+        # If style_to_idx is provided (for val/test), use it; otherwise create a new one
+        if style_to_idx is not None:
+            self.style_to_idx = style_to_idx
+            # Get list of styles from the dictionary keys
+            self.styles = list(style_to_idx.keys())
+            print(f"Using provided style_to_idx mapping with {len(self.styles)} styles")
+        else:
+            #create style-emotion mapping 
+            self.styles = sorted(list(set(self.dataset["style"])))
+            self.style_to_idx = {style: idx for idx, style in enumerate(self.styles)}
+            print(f"Created new style_to_idx mapping with {len(self.styles)} styles")
         
         print(f"Loaded {len(self.dataset)} samples from {split_name} split") # Use split_name
-        print(f"Number of styles: {len(self.styles)}")
+        print(f"Available styles in this split: {sorted(list(set(self.dataset['style'])))}")
     
     
     def __len__(self):
@@ -49,7 +64,13 @@ class ExpressoEmotionDataset(Dataset):
         
         #get emotion labels 
         style = sample["style"]
-        emotion_label = self.style_to_idx[style]
+        if style not in self.style_to_idx:
+            # This should never happen after we filter the dataset,
+            # but just in case, use a default label (0)
+            print(f"Warning: Style '{style}' not found in style_to_idx mapping! Using default label 0.")
+            emotion_label = 0
+        else:
+            emotion_label = self.style_to_idx[style]
         
         return {
             "input_features": input_features, 
@@ -57,14 +78,14 @@ class ExpressoEmotionDataset(Dataset):
             "emotion_label": torch.tensor(emotion_label, dtype=torch.long), 
         }
     
-    @staticmethod
-    def collate_fn(batch):
+    def collate_fn(self, batch):
         max_input_length = max(x["input_features"].size(0) for x in batch)
         max_label_length = max(x["labels"].size(0) for x in batch)
         
         
         input_features = torch.zeros(len(batch), max_input_length, batch[0]["input_features"].size(1))
-        labels = torch.ones(len(batch), max_label_length, dtype=torch.long) * -100 #-100 is the pad token id 
+        # Use self.pad_token_id for padding labels
+        labels = torch.ones(len(batch), max_label_length, dtype=torch.long) * self.pad_token_id 
         emotion_labels = torch.zeros(len(batch), dtype=torch.long)
         
         for i, item in enumerate(batch):
@@ -113,7 +134,7 @@ def create_dataset(processor, selected_styles=None, cache_dir=None, test_size=0.
     val_data = val_test_split["train"]
     test_data = val_test_split["test"]
     
-    #create train dataset
+    #create train dataset first to get style mapping
     train_dataset = ExpressoEmotionDataset(
         dataset_split=train_data, 
         processor=processor, 
@@ -122,21 +143,22 @@ def create_dataset(processor, selected_styles=None, cache_dir=None, test_size=0.
     )
     
     #style mapping from train dataset for consistency 
-    styles = train_dataset.styles 
     style_to_idx = train_dataset.style_to_idx 
     
-    #create validation dataset 
+    #create validation dataset with the same style mapping
     val_dataset = ExpressoEmotionDataset(
         dataset_split=val_data, 
         processor=processor, 
-        selected_styles=styles, # Use styles from training set for consistency
+        selected_styles=selected_styles,  # Use original selected_styles, not train styles
+        style_to_idx=style_to_idx,  # Pass the train dataset's style mapping
         split_name="validation"
     )
     
     test_dataset = ExpressoEmotionDataset(
         dataset_split=test_data, 
         processor=processor, 
-        selected_styles=styles, # Use styles from training set for consistency
+        selected_styles=selected_styles,  # Use original selected_styles, not train styles
+        style_to_idx=style_to_idx,  # Pass the train dataset's style mapping
         split_name="test"
     )
     

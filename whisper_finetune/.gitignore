@@ -1,2 +1,16 @@
 .env
 mynotes.md
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model files and training outputs
+emotion_whisper_model/
+models/
+*.pt
+*.pth
+
+# Weights & Biases
+wandb/

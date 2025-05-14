@@ -106,9 +106,10 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    #load model and processor 
-    print("Loading model and processor...")
-    model, processor = load_emotion_whisper_model()
+    #load just the processor first (needed for dataset creation)
+    print("Loading processor...")
+    from transformers import WhisperProcessor
+    processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
     
     #load dataset 
     print("Loading dataset...")
@@ -119,6 +120,17 @@ def train():
         data_percentage=args.data_percentage
     )
     
+    # Get the number of emotion classes from the dataset
+    num_emotion_classes = len(style_to_idx)
+    print(f"Number of emotion classes in the dataset: {num_emotion_classes}")
+    
+    # Initialize model with the correct number of emotion classes
+    print("Loading model with correct emotion classes...")
+    model, processor = load_emotion_whisper_model(num_emotions_classes=num_emotion_classes)
+    
+    # Get the pad_token_id from the processor
+    pad_token_id = processor.tokenizer.pad_token_id
+    
     #save style mapping 
     style_map_path = os.path.join(args.output_dir, "style_to_id.txt")
     with open(style_map_path, "w") as f: 
@@ -126,6 +138,7 @@ def train():
             f.write(f"{style}: {idx}\n")
             
     #create dataloaders 
+    # Pass the instance method train_dataset.collate_fn and val_dataset.collate_fn
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=train_dataset.collate_fn)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=val_dataset.collate_fn)
     
@@ -134,7 +147,8 @@ def train():
     print(f"Model: {model}")
     
     #define loss functions 
-    transcription_loss_fn = nn.CrossEntropyLoss(ignore_index=-100) #note to self: looking to the special tokens in the whisper processor 
+    # Use pad_token_id as ignore_index for transcription loss
+    transcription_loss_fn = nn.CrossEntropyLoss(ignore_index=pad_token_id) 
     emotion_loss_fn = nn.CrossEntropyLoss()
     
 
@@ -170,15 +184,17 @@ def train():
             #move batch to device 
             input_features = batch["input_features"].to(device)
             labels = batch["labels"].to(device)
-            emotion_labels = [el.to(device) for el in batch["emotion_labels"]]
+            emotion_labels = batch["emotion_labels"].to(device)
             
             #zero gradients 
             optimizer.zero_grad()
             
+            decoder_input_ids_train = labels[:, :-1].clone()
+
             #forward pass 
             outputs = model(
                 input_features=input_features, 
-                decoder_input_ids=labels[:, :-1] if labels.size(1) > 1 else None, #teacher forcing 
+                decoder_input_ids=decoder_input_ids_train, 
                 timestamp_indices=None #no timestamp indies during training
             )
             
@@ -186,8 +202,8 @@ def train():
             emotion_logits = outputs["emotion_logits"]
             
             #calculate transcription loss 
-            shifted_logits = logits[:, :-1, :].contiguous() if logits.size(1) > 1 else logits #this isnt teacher forcing, apparently whisper adds an additional token that we have to remove -> double check this  
-            shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels #teacher forcing 
+            shifted_logits = logits.contiguous()
+            shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels
             
             #calculate transcription loss 
             transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))
@@ -244,13 +260,16 @@ def train():
                 #move batch to device 
                 input_features = batch["input_features"].to(device)
                 labels = batch["labels"].to(device)
-                timestamp_indices = batch("timestamp_indices", None)
-                emotion_labels = [el.to(device) for el in batch["emotion_labels"]]
+                emotion_labels = batch["emotion_labels"].to(device)
+                
+                # Prepare decoder_input_ids for teacher forcing
+                # Labels already padded with pad_token_id by the dataset's collate_fn
+                decoder_input_ids_val = labels[:, :-1].clone()
                 
                 #forward pass 
                 outputs = model(
                     input_features=input_features, 
-                    decoder_input_ids=labels[:, :-1] if labels.size(1) > 1 else None, 
+                    decoder_input_ids=decoder_input_ids_val,  
                     timestamp_indices=None
                 )
                 
@@ -258,8 +277,8 @@ def train():
                 emotion_logits = outputs["emotion_logits"]
                 
                 #calculate the transcription loss 
-                shifted_logits = logits[:, :-1, :].contiguous() if logits.size(1) > 1 else logits 
-                shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels 
+                shifted_logits = logits.contiguous()
+                shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels
                 
                 #calculate transcription loss 
                 transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))

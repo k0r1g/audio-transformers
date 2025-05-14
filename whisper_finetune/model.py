@@ -104,8 +104,8 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
         result = {
             "logits": logits, 
             "emotion_logits": emotion_logits, 
-            "hidden_states": outputs.hidden_states, 
-            "attentions": outputs.attentions, 
+            # "hidden_states": outputs.hidden_states, 
+            # "attentions": outputs.attentions, 
         }
         
         return result 
