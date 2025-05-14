@@ -1,0 +1,15 @@
+{"time":"2025-05-14T11:19:26.801615119Z","level":"INFO","msg":"stream: starting","core version":"0.19.11","symlink path":"/root/audio-transformers/whisper_finetune/wandb/run-20250514_111926-6ztq2crk/logs/debug-core.log"}
+{"time":"2025-05-14T11:19:27.125176908Z","level":"INFO","msg":"created new stream","id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:27.125278369Z","level":"INFO","msg":"stream: started","id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:27.127146339Z","level":"INFO","msg":"sender: started","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:27.127201759Z","level":"INFO","msg":"handler: started","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:27.127238738Z","level":"INFO","msg":"writer: Do: started","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:27.680452377Z","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-05-14T11:19:44.32866559Z","level":"INFO","msg":"stream: closing","id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:44.328756501Z","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-05-14T11:19:44.328799452Z","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-05-14T11:19:45.052313599Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-05-14T11:19:45.29862175Z","level":"INFO","msg":"handler: closed","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:45.298727006Z","level":"INFO","msg":"writer: Close: closed","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:45.298897372Z","level":"INFO","msg":"sender: closed","stream_id":"6ztq2crk"}
+{"time":"2025-05-14T11:19:45.298917051Z","level":"INFO","msg":"stream: closed","id":"6ztq2crk"}

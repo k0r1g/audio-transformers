@@ -45,8 +45,7 @@ class ExpressoEmotionDataset(Dataset):
         
         #process transcription (text) 
         transcription = sample["text"] 
-        with self.processor.as_target_processor(): #set it into the tokeniser mode
-            labels = self.processor(transcription).input_ids
+        labels = self.processor.tokenizer(text_target=transcription).input_ids
         
         #get emotion labels 
         style = sample["style"]
