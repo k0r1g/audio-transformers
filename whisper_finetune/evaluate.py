@@ -20,65 +20,40 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_segments_with_timestamps(processor, model, input_features, device):
+def get_segments_with_timestamps(model, processor, input_features, device):
     """
-    Generate transcription (optionally with timestamps) and extract segments.
-    This version removes EVERY preset forced-decoder-id so Whisper can run
-    with its own defaults without triggering the conflict.
+    Runs Whisper once and returns
+      • segments  – list[list[dict(start, end, text, tokens)]]
+      • ts_idx    – list[list[int]]  end-token positions for each segment
+      • sequences – torch.LongTensor of generated token ids
+    It also removes every leftover forced-decoder-id so `generate()` can run.
     """
 
-    # ------------------------------------------------------------------ #
-    # 1) make sure the tokenizer knows where timestamp tokens start
-    # ------------------------------------------------------------------ #
-    if not hasattr(processor.tokenizer, "timestamp_begin"):
-        processor.tokenizer.timestamp_begin = 50364          # hard-coded HF default
-        print("Manually set timestamp_begin to 50364")
+    # wipe every pre-stored list that could clash inside generate_with_fallback()
+    model.whisper.config.forced_decoder_ids = None
+    model.whisper.generation_config.forced_decoder_ids = None
 
-    # ------------------------------------------------------------------ #
-    # 2) ***THE REAL FIX*** – clear every forced-id field the library checks
-    # ------------------------------------------------------------------ #
-    model.whisper.config.forced_decoder_ids          = None      # main config
-    model.whisper.generation_config.forced_decoder_ids = None    # generation cfg
-
-    # ------------------------------------------------------------------ #
-    # 3) run the absolutely minimal generation call
-    # ------------------------------------------------------------------ #
     with torch.no_grad():
-        # pass forced_decoder_ids=None explicitly (harmless, reinforces the fix)
-        sequences = model.whisper.generate(
+        out = model.whisper.generate(
             input_features.to(device),
-            forced_decoder_ids=None,          # <<— guarantees no duplication
-            max_length=256,
-            return_dict_in_generate=False     # simplest output (tensor)
+            task="transcribe",          # let HF pick the right ids
+            language="en",              # or drop if multilingual
+            return_timestamps=True,     # **makes the model emit timestamp tokens**
+            return_segments=True,       # **HF slices them for us**
+            max_new_tokens=256,
+            forced_decoder_ids=None,    # redundant but explicit
+            return_dict_in_generate=True,
         )
 
-    # ------------------------------------------------------------------ #
-    # 4) post-process: find timestamp tokens and slice segments
-    # ------------------------------------------------------------------ #
-    timestamp_tokens, segments = [], []
-    for seq in sequences:
-        tokens          = seq.cpu().numpy()
-        ts_positions    = []
-        segs            = []
-        start_time      = 0.0
+    segments_batch = out["segments"]        # length == batch size
+    sequences      = out["sequences"]
 
-        for i, tok_id in enumerate(tokens):
-            if tok_id >= processor.tokenizer.timestamp_begin:
-                t = float(tok_id - processor.tokenizer.timestamp_begin) / 50.0
-                if t > start_time:
-                    segs.append(
-                        dict(text   = processor.tokenizer.decode(
-                                   seq[:i], skip_special_tokens=True
-                               ).strip(),
-                             start  = start_time,
-                             end    = t))
-                    ts_positions.append(i)
-                start_time = t
+    # convert each segment list → its last-token position (needed by your head)
+    ts_idx = [
+        [seg["tokens"][-1] for seg in segs] for segs in segments_batch
+    ]
 
-        segments.append(segs)
-        timestamp_tokens.append(ts_positions)
-
-    return segments, timestamp_tokens, sequences
+    return segments_batch, ts_idx, sequences
 
 def main(): 
     args = parse_args()
@@ -125,6 +100,13 @@ def main():
     model = model.to(device)
     model.eval()
     
+    # ---------- ensure generation_config has the timestamp ids ----------
+    try:
+        gen_cfg = GenerationConfig.from_pretrained(args.model_path)
+    except (OSError, ValueError):
+        gen_cfg = GenerationConfig.from_pretrained("openai/whisper-tiny")
+    model.whisper.generation_config = gen_cfg
+
     #load test dataset 
     print("loading test dataset...")
     selected_styles = SIMPLE_STYLES if args.simple_styles else None 
@@ -163,9 +145,11 @@ def main():
             
             #generate segments using whisper timestamps 
             segments, timestamp_tokens, generated_sequences = get_segments_with_timestamps(
-                processor, model, input_features, device 
+                model, processor, input_features, device 
             )
             
+            generated_sequences = generated_sequences.to(device)
+
             # Get true transcriptions
             true_transcriptions = []
             for label_seq in labels:
@@ -247,6 +231,7 @@ def main():
                 #run model with timestamp indices for segment-based prediction 
                 model_outputs = model(
                     input_features=input_features[b:b+1],
+                    decoder_input_ids=generated_sequences[b:b+1],
                     timestamp_indices=[timestamp_tokens[b]]
                 )
                 
