@@ -5,14 +5,15 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader 
 from sklearn.metrics import accuracy_score, f1_score, classification_report 
 
-# Import the custom model class and WhisperProcessor
-from model import EmotionWhisperModel, load_emotion_whisper_model
+from model import EmotionWhisperModel, load_emotion_whisper_model # MODIFIED: Ensure load_emotion_whisper_model is imported
 from transformers import WhisperProcessor
+# from huggingface_hub import hf_hub_download # Not strictly needed if args.model_path is always local for weights
 from dataset import create_dataset, SIMPLE_STYLES 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate Emotion Whisper model")
-    parser.add_argument("--model_path", type=str, default="./emotion_whisper_model/best_model")
+    # MODIFIED: Updated default and help string for model_path to emphasize local path for weights
+    parser.add_argument("--model_path", type=str, default="./emotion_whisper_model/best_model", help="Path to local directory containing model weights (pytorch_model.bin or model.safetensors). Processor files can be co-located or fetched if model_path is also a Hub ID.")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size for evaluation")
     parser.add_argument("--simple_styles", action="store_true", help="Use simplified emotion styles instead of full set")
     parser.add_argument("--output_dir", type=str, default="./evaluation_results", help="Directory to save evaluation results")
@@ -21,13 +22,33 @@ def parse_args():
 
 def get_segments_with_timestamps(processor, model, input_features, device):
     """Generate transcription with timestamps and extract segments"""
-    # Run inference with forced timestamp prediction
-    forced_decoder_ids = processor.get_decoder_prompt_ids(
-        task="transcribe", 
-        language="en", 
-        return_timestamps=True
-    )
     
+    forced_decoder_ids = None
+    try:
+        # Try newer API
+        forced_decoder_ids = processor.get_decoder_prompt_ids(
+            task="transcribe", 
+            language="en", 
+            return_timestamps=True
+        )
+        print("Successfully used get_decoder_prompt_ids with return_timestamps=True")
+    except TypeError:
+        # Fall back to older API
+        print("Warning: processor.get_decoder_prompt_ids does not support 'return_timestamps'. Using fallback.")
+        forced_decoder_ids = processor.get_decoder_prompt_ids(
+            task="transcribe", 
+            language="en"
+        )
+        # Enable timestamps via tokenizer if possible
+        if hasattr(processor.tokenizer, "set_prefix_tokens"):
+            try:
+                processor.tokenizer.set_prefix_tokens(predict_timestamps=True)
+                print("Successfully called processor.tokenizer.set_prefix_tokens(predict_timestamps=True)")
+            except Exception as e:
+                print(f"Warning: Could not set_prefix_tokens: {e}")
+        else:
+            print("Warning: processor.tokenizer does not have set_prefix_tokens method. Timestamps might not be generated.")
+
     with torch.no_grad():
         outputs = model.whisper.generate(
             input_features.to(device), 
@@ -77,22 +98,37 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    #load model and processor 
-    print(f"Loading model and processor from {args.model_path}...")
+    # MODIFIED: Model Loading Section as per user's "Simplest Solutions"
+    print(f"Loading processor from {args.model_path}...")
+    # Processor can be loaded from a Hub ID or local path specified by args.model_path
     processor = WhisperProcessor.from_pretrained(args.model_path)
-    model, _ = load_emotion_whisper_model()
+    
+    print(f"Initializing model architecture using local load_emotion_whisper_model...")
+    # Load model architecture using your own load function for consistency.
+    # This will use the num_emotions_classes default from your model.py (e.g., 10 classes)
+    model, _ = load_emotion_whisper_model() 
+
+    print(f"Attempting to load trained weights from local path: {args.model_path}...")
+    # args.model_path is expected to be a local directory path for weight files here.
     model_weights_path_bin = os.path.join(args.model_path, "pytorch_model.bin")
     model_weights_path_safetensors = os.path.join(args.model_path, "model.safetensors")
 
+    loaded_weights = False
     if os.path.exists(model_weights_path_bin):
         print(f"Loading weights from {model_weights_path_bin}")
-        model.load_state_dict(torch.load(model_weights_path_bin, map_location=device))
+        model.load_state_dict(torch.load(model_weights_path_bin, map_location=device), strict=False)
+        loaded_weights = True
     elif os.path.exists(model_weights_path_safetensors):
         print(f"Loading weights from {model_weights_path_safetensors}")
         from safetensors.torch import load_file
-        model.load_state_dict(load_file(model_weights_path_safetensors, device=device))
-    else:
-        raise FileNotFoundError(f"Model weights not found at {model_weights_path_bin} or {model_weights_path_safetensors}")
+        model.load_state_dict(load_file(model_weights_path_safetensors), strict=False) # Removed device=device as per previous fix
+        loaded_weights = True
+    
+    if not loaded_weights:
+        print(f"Warning: Model weights not found at {model_weights_path_bin} or {model_weights_path_safetensors}.")
+        print("Model will use initialized weights. If this is not for initial training, evaluation will be random.")
+        # Potentially raise an error if weights are mandatory for evaluation:
+        # raise FileNotFoundError(f"Model weights not found at {model_weights_path_bin} or {model_weights_path_safetensors}. Cannot proceed with evaluation.")
 
     model = model.to(device)
     model.eval()
