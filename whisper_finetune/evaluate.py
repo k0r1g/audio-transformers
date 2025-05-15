@@ -36,24 +36,43 @@ def get_segments_with_timestamps(model, processor, input_features, device):
     with torch.no_grad():
         out = model.whisper.generate(
             input_features.to(device),
-            task="transcribe",          # let HF pick the right ids
-            language="en",              # or drop if multilingual
-            return_timestamps=True,     # **makes the model emit timestamp tokens**
-            return_segments=True,       # **HF slices them for us**
+            task="transcribe",
+            language="en",
+
+            # --------- make it emit timestamps ----------
+            predict_timestamps=True,          # <- forces timestamp tokens
+            return_timestamps=True,
+            return_segments=True,
+
+            # --------- stop the repetition ----------
+            temperature=0.7,                  # small randomness
+            no_repeat_ngram_size=3,           # forbid 3-gram loops
+            compression_ratio_threshold=2.4,  # ban copy-pasta
+            repetition_penalty=1.1,           # soft penalty
+
+            # --------- length & speed ----------
             max_new_tokens=256,
-            forced_decoder_ids=None,    # redundant but explicit
+            forced_decoder_ids=None,          # keep wiped
             return_dict_in_generate=True,
         )
 
     segments_batch = out["segments"]        # length == batch size
     sequences      = out["sequences"]
 
-    # convert each segment list → its last-token position (needed by your head)
-    ts_idx = [
-        [seg["tokens"][-1] for seg in segs] for segs in segments_batch
-    ]
+    # Filter empty segments and create timestamp indices for each batch item
+    filtered_segments_batch = []
+    ts_idx = []
+    
+    for batch_segments in segments_batch:
+        # Only keep segments with non-empty text
+        filtered_segments = [s for s in batch_segments if s["text"].strip()]
+        filtered_segments_batch.append(filtered_segments)
+        
+        # Extract timestamp indices from non-empty segments
+        batch_ts_idx = [seg["tokens"][-1] for seg in filtered_segments]
+        ts_idx.append(batch_ts_idx)
 
-    return segments_batch, ts_idx, sequences
+    return filtered_segments_batch, ts_idx, sequences
 
 def main(): 
     args = parse_args()
@@ -252,16 +271,6 @@ def main():
                         seq_emotion_logits = seq_emotion_logits.unsqueeze(0)
                 
                     pred_emotions_for_sample = torch.argmax(seq_emotion_logits, dim=1).cpu().numpy().tolist()
-
-                # Check if number of predicted emotions matches number of segments
-                if len(pred_emotions_for_sample) != len(segments[b]):
-                    print(f"Warning: Mismatch between num_segments ({len(segments[b])}) and num_pred_emotions ({len(pred_emotions_for_sample)}) for sample {b}.")
-                    # Handle mismatch: e.g., pad predictions or use a default
-                    # For now, we'll only log and proceed, which might lead to errors later or incorrect metrics.
-                    # A robust way is to ensure they align, possibly by taking min length.
-                    min_len = min(len(pred_emotions_for_sample), len(segments[b]))
-                    pred_emotions_for_sample = pred_emotions_for_sample[:min_len]
-                    # This might also mean `true_emotions_for_sample` needs adjustment if it depends on `len(pred_emotions_for_sample)`
 
                 # Convert predicted emotion indices to names
                 pred_emotion_names = [idx_to_style.get(idx, f"Unknown_{idx}") for idx in pred_emotions_for_sample]
