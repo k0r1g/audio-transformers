@@ -3,7 +3,8 @@ from torch.utils.data import Dataset
 from datasets import load_dataset, DatasetDict
 from transformers import WhisperProcessor 
 from typing import Dict, List, Optional 
-import numpy as np # Added for np.random.choice
+import numpy as np
+from collections import Counter
 
 
 class ExpressoEmotionDataset(Dataset):
@@ -40,9 +41,11 @@ class ExpressoEmotionDataset(Dataset):
             self.style_to_idx = {style: idx for idx, style in enumerate(self.styles)}
             print(f"Created new style_to_idx mapping with {len(self.styles)} styles")
         
-        print(f"Loaded {len(self.dataset)} samples from {split_name} split") # Use split_name
+        # Print dataset info
+        style_counts = Counter(self.dataset["style"])
+        print(f"Loaded {len(self.dataset)} samples from {split_name} split")
         print(f"Available styles in this split: {sorted(list(set(self.dataset['style'])))}")
-    
+        print(f"Style distribution: {dict(style_counts)}")
     
     def __len__(self):
         return len(self.dataset)
@@ -105,66 +108,125 @@ class ExpressoEmotionDataset(Dataset):
             "labels": labels, 
             "emotion_labels": emotion_labels, 
         }
+
+
+def create_stratified_split(dataset, selected_styles=None, test_size=0.1, val_size=0.1):
+    """Create a stratified split ensuring all styles appear in all splits."""
+    
+    # Filter by selected styles if provided
+    if selected_styles is not None:
+        dataset = dataset.filter(lambda x: x["style"] in selected_styles)
+    
+    # Group data by style
+    style_to_examples = {}
+    for i, example in enumerate(dataset):
+        style = example["style"]
+        if style not in style_to_examples:
+            style_to_examples[style] = []
+        style_to_examples[style].append(i)
+    
+    # Create stratified splits
+    train_indices = []
+    val_indices = []
+    test_indices = []
+    
+    for style, indices in style_to_examples.items():
+        # Shuffle indices for this style
+        np.random.shuffle(indices)
         
+        # Calculate split sizes
+        n_examples = len(indices)
+        n_test = max(1, int(n_examples * test_size))
+        n_val = max(1, int(n_examples * val_size))
+        n_train = n_examples - n_test - n_val
+        
+        # Ensure at least one example of each style in each split
+        if n_train == 0:
+            n_train = 1
+            if n_val > 1:
+                n_val -= 1
+            elif n_test > 1:
+                n_test -= 1
+        
+        # Split indices
+        train_indices.extend(indices[:n_train])
+        val_indices.extend(indices[n_train:n_train+n_val])
+        test_indices.extend(indices[n_train+n_val:])
+    
+    # Create the splits
+    train_dataset = dataset.select(train_indices)
+    val_dataset = dataset.select(val_indices)
+    test_dataset = dataset.select(test_indices)
+    
+    return train_dataset, val_dataset, test_dataset
+
 
 def create_dataset(processor, selected_styles=None, cache_dir=None, test_size=0.1, val_size=0.1, data_percentage: float = 1.0):
     #load dataset - ylacombe/expresso only has a 'train' split
     full_dataset = load_dataset("ylacombe/expresso", split="train", cache_dir=cache_dir)
+    
+    # Remove longform samples
+    print(f"Dataset size before removing longform: {len(full_dataset)}")
+    full_dataset = full_dataset.filter(lambda x: x["style"] != "longform")
+    print(f"Dataset size after removing longform: {len(full_dataset)}")
 
     # If data_percentage is less than 1.0, select a random subset
     if data_percentage < 1.0:
         num_samples = int(len(full_dataset) * data_percentage)
-        # Ensure reproducibility if needed by setting a seed for np.random
-        # np.random.seed(42) # Optional: for reproducible subset selection
+        # Ensure reproducibility
+        np.random.seed(42)
         indices = np.random.choice(len(full_dataset), num_samples, replace=False)
         full_dataset = full_dataset.select(indices)
         print(f"Using {data_percentage*100:.2f}% of the data: {num_samples} samples.")
-
-    # Split train data into train and temp (val + test)
-    # (1 - test_size) for train, test_size for temp
-    train_test_split = full_dataset.train_test_split(test_size=test_size + val_size, shuffle=True, seed=42)
-    train_data = train_test_split["train"]
-    temp_data = train_test_split["test"]
-
-    # Split temp data into validation and test
-    # Calculate new val_size relative to temp_data size
-    # e.g. if temp_data is 20% of original, and we want val_size to be 10% of original,
-    # then val_size for temp_data.train_test_split is 0.1 / 0.2 = 0.5
-    val_test_split = temp_data.train_test_split(test_size=test_size / (test_size + val_size), shuffle=True, seed=42)
-    val_data = val_test_split["train"]
-    test_data = val_test_split["test"]
+    
+    # Get all unique styles in the dataset
+    all_styles = list(set(full_dataset["style"]))
+    if selected_styles is not None:
+        # Filter to only include styles from selected_styles that actually exist in the dataset
+        all_styles = [style for style in all_styles if style in selected_styles]
+    
+    # Create mapping from all styles that will be used (before splitting)
+    all_styles = sorted(all_styles)
+    style_to_idx = {style: idx for idx, style in enumerate(all_styles)}
+    print(f"Created style_to_idx mapping with {len(style_to_idx)} styles: {style_to_idx}")
+    
+    # Create stratified splits to ensure all styles are in all splits
+    train_data, val_data, test_data = create_stratified_split(
+        full_dataset, 
+        selected_styles=selected_styles, 
+        test_size=test_size, 
+        val_size=val_size
+    )
     
     #create train dataset first to get style mapping
     train_dataset = ExpressoEmotionDataset(
         dataset_split=train_data, 
         processor=processor, 
         selected_styles=selected_styles,
+        style_to_idx=style_to_idx,  # Use the comprehensive style mapping
         split_name="train"
     )
     
-    #style mapping from train dataset for consistency 
-    style_to_idx = train_dataset.style_to_idx 
-    
-    #create validation dataset with the same style mapping
     val_dataset = ExpressoEmotionDataset(
         dataset_split=val_data, 
         processor=processor, 
-        selected_styles=selected_styles,  # Use original selected_styles, not train styles
-        style_to_idx=style_to_idx,  # Pass the train dataset's style mapping
+        selected_styles=selected_styles,
+        style_to_idx=style_to_idx,  # Use the same comprehensive style mapping
         split_name="validation"
     )
     
     test_dataset = ExpressoEmotionDataset(
         dataset_split=test_data, 
         processor=processor, 
-        selected_styles=selected_styles,  # Use original selected_styles, not train styles
-        style_to_idx=style_to_idx,  # Pass the train dataset's style mapping
+        selected_styles=selected_styles,
+        style_to_idx=style_to_idx,  # Use the same comprehensive style mapping
         split_name="test"
     )
     
-    return train_dataset, val_dataset, test_dataset, style_to_idx 
+    return train_dataset, val_dataset, test_dataset, style_to_idx
 
-# subset of styles for initial simplified implementation 
+
+# Subset of styles for initial simplified implementation 
 SIMPLE_STYLES = [
     "angry", 
     "calm",
