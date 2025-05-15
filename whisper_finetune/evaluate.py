@@ -29,6 +29,10 @@ def get_segments_with_timestamps(model, processor, input_features, device):
     It also removes every leftover forced-decoder-id so `generate()` can run.
     """
 
+    # ----- 0. ensure timestamp_begin exists -----
+    if not hasattr(processor.tokenizer, "timestamp_begin"):
+        processor.tokenizer.timestamp_begin = processor.tokenizer._convert_token_to_id("<|timestamp_0|>")
+
     # wipe every pre-stored list that could clash inside generate_with_fallback()
     model.whisper.config.forced_decoder_ids = None
     model.whisper.generation_config.forced_decoder_ids = None
@@ -53,24 +57,31 @@ def get_segments_with_timestamps(model, processor, input_features, device):
             forced_decoder_ids=None,
         )
 
-    filtered_segments_batch = []
-    ts_idx = []
-
     ts_begin = processor.tokenizer.timestamp_begin
 
+    filtered_segments_batch, ts_idx = [], []
+
     for segs in out["segments"]:
-        good = []
-        idxs = []
+        good, idxs = [], []
 
         for seg in segs:
-            # handle both dict and dataclass
-            text   = seg["text"]   if isinstance(seg, dict) else seg.text
+            # unify access
             tokens = seg["tokens"] if isinstance(seg, dict) else seg.tokens
+            text   = (seg.get("text") if isinstance(seg, dict)
+                      else getattr(seg, "text", None))
+            # if "text" wasn't provided (old HF) → build it now
+            if text is None:
+                content_tokens = [t for t in tokens if t < ts_begin]
+                text = processor.tokenizer.decode(content_tokens,
+                                                  skip_special_tokens=True).strip()
 
-            if text.strip():               # skip empty/no-speech segments
-                good.append(seg)
-                # take last timestamp token in this segment
-                idxs.append(next(t for t in reversed(tokens) if t >= ts_begin))
+            # skip empty/no-speech segments
+            if not text:
+                continue
+
+            # keep segment and record last timestamp-token index
+            good.append(seg)
+            idxs.append(next(t for t in reversed(tokens) if t >= ts_begin))
 
         filtered_segments_batch.append(good)
         ts_idx.append(idxs)

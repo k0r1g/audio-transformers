@@ -1,2 +1,212 @@
 ===== TRANSCRIPTION AND EMOTION PREDICTIONS =====
 
+===== BATCH 1 =====
+
+Sample 1:
+True Emotion: confused
+True Transcription: Denver, he's the son of a *fundamentalist* preacher.
+Predicted Transcription: Denver, he's the son of a frontamentalist preacher. Deemver, He's the Son of a...fundamentalist Prejudice preacher. He's The Son of A,fundamentalists preacher. I'd be here. I'm going to do my best. I'll be here with a new coach. He was the son-uper. He moved into his way to his head. He left. He got into a doctor's office. He had to play basketball. He did his homework. He liked the same thing. He told him. He didn't want to play. He really had to find a doctor. He loved him. he loved his coach. he leaned. He made a high of course. He wanted to drive. he said. He played. He ended up. Heied. He thought he'd know him. and he made a low of course when he had to learn. He likes to drive his life. He tried. He said. but. He says he played. he wants to know. he had a low who's like. he's like, he'll play. he'd be. He also. he knows he's very well. He wrote. He called. He knows.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 2:
+True Emotion: confused
+True Transcription: what were you looking for in Colorado?
+Predicted Transcription: what were you looking for in Colorado? Oh! what were you working for in color, Colorado? hey! what are you looking from Colorado? oh! What were you talking about? Hey! What are you? What were we looking for on Colorado? Huh? Huh. What were You looking for are you taking from Colorado. Huh? How did you know? What are we looking through? What we're looking for? Huh! What we are looking for.What were you looking for in Color Adam? Huh...What were You watching from Colorado, huh? Huh, what were You? What Were you looking through. What we were looking for, huh. Huh.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 3:
+True Emotion: confused
+True Transcription: Do you recognize this?
+Predicted Transcription: Do you recognize this? Do you recognizeThis? Are you recognize? Is this? Can you recognizeIs? No. Do you. recognize This? What do you recognize is? Can I recognize this.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 4:
+True Emotion: confused
+True Transcription: *Who* hit you?
+Predicted Transcription: Who had you? Who hit you? Huh? who hit you. Huh? How would it be? who? He's doing it! You! who hit me? He is doing it. who? who had you. You! Who had you! Who ate you? who did you? He said he said he was doing it again. What? Who had your! You said he didn't know. So I had to get my ID. and I got into this.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+===== BATCH 2 =====
+
+Sample 5:
+True Emotion: confused
+True Transcription: Did you read the article about Shonda Rhimes from ABC Studios?
+Predicted Transcription:  Did you read the article about Shonda Rhimes from ABC Studios? The movie The article about John Dorem from ABCusty.os? uh. uh. Did you reading the article? about Shondor Rhimes for ABC Studios. Huh? uh uh. and uh. yeah. yeah, dad. uh do. uh uh uh and uh uh dot com. uh um. uh it's like uh and then uh. um uh uh dad. um. um um. they're like. and um uh. Oh, uh uh yes. uh but I'm uh. they are. uh com. and. uh and. um oh. uh hi. uh my. uh yeah. uh I.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: essentials
+
+Sample 6:
+True Emotion: confused
+True Transcription: Sorry, I still do not have that information.
+Predicted Transcription: Sorry, I still do not have that information. sorry, I feel do not know that information? sorry, sorry, uh I still don't have that info!
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 7:
+True Emotion: confused
+True Transcription: Um, no, it won't be warm tomorrow in your area.
+Predicted Transcription: Um, no, it won't be warm tomorrow in your area. Hey, uh... No, it will be warm Tomorrow in your city. Huh? Oh, it'll be warm twelfth. It won't jump out on your area.*.. Oh, uh, uh. Oh. No, It won'll be one tomorrow in area.*, right? I guess. OK, uh?
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 8:
+True Emotion: confused
+True Transcription: How'd your shirt get torn, sweetie?
+Predicted Transcription: How'd your shirt get torn, sweetie? You're sure to get torn. Sweet! Get torn, sweet! how'd yourshirt get torn? Sweet!? Sweet? How'd your should get torn! Sweet? Sweet. How'd you shirt get tore on the sleep? Huh? How would your shirt Get torn? sweet?
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+===== BATCH 3 =====
+
+Sample 9:
+True Emotion: confused
+True Transcription: They are not advertised.
+Predicted Transcription: They are not advertised. OK, I guess. OK. They are not advertisements. No. OK...
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 10:
+True Emotion: confused
+True Transcription: Male, twenty six, collapsed on the scene!
+Predicted Transcription: Male, twenty six, collapsed on the scene!Male! twenty six collapsed on a scene! I mean, it's not really working. I mean he didn't. I think he had a big laugh! I think it's a big piece of advice! I believe he had some kind of advice to him. I'm sorry, I think I'm going to leave this. I don't know if he said so. I love it. I like it. You're welcome to this. You know what I'm doing. I know that. I am using my list for this. Please, please give me a like. I'll drop your question. I will be fine. I won't be. I wanna talk to you. I can't talk to him again. I feel sorry. I have my list. I want to get a high of my list from now. I might go out and my list are both. I haven't. This is for sure. I'd be okay. I've got a high. I miss and I know I know. I eat out. I just love it for sure and I love your list. You guys are all great. I got you. Do my best. I actually love it! I love you.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 11:
+True Emotion: confused
+True Transcription: Is it the shape of things to come?
+Predicted Transcription: Is it the shape of things to come? No.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 12:
+True Emotion: confused
+True Transcription: Enjoy the movie!
+Predicted Transcription: Enjoy the movie!
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+===== BATCH 4 =====
+
+Sample 13:
+True Emotion: confused
+True Transcription: Add thirty two minutes and thirty eight seconds to your twenty six minute timer, right?
+Predicted Transcription: Add thirty two minutes and thirty eight seconds to your twenty six minute timer, right? I'm a right. And thirty eight second to your twentieth minute timer right? Oh, right. The third is an eight second. Do your twenty sixth minute timer. I'm okay with it. I like the second. And three seven minutes. You're doing great! Now you're doing good! So please add them to your list of course. I love your list. I mean, please go to my list of four minutes and I'm sorry for those two. I'd be here to my district. I know that I'm going to get to see how it'll be. I really like this. I am going to play with it again. I don't have to drive. I wanna talk to you. I do my list. and I will stop. I have a lot of minutes. I want to leave. I kind of like my list from both thousand and I think I can't have. I always have. and also I love the last. and then I know. I miss. I think you're watching this. This is also a high. I might use my list to give and I love this. and if I'm not. I. I
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 14:
+True Emotion: confused
+True Transcription: I had too much to drink.
+Predicted Transcription: I had too much to drink. I had too many to drink, but I had to watch the drink. What do you want? I had two much to drunk. thanks! Ho!
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 15:
+True Emotion: confused
+True Transcription: *Oh my God*, does this mean you're becoming normal?
+Predicted Transcription:  oh my God, does this mean you're becoming normal? I got along with this mean, you're become normal. Huh? What? Oh my God!Does this mean we're becoming more and more? I don't know. I'm a smart guy. Oh my my God. does this meaning you're black coming normal? Hey, what's up?
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 16:
+True Emotion: confused
+True Transcription: There'll be a funnel cloud Monday, but it'll be mostly sunny Tuesday.
+Predicted Transcription: There'll be a funnel cloud Monday, but it'll be mostly sunny Tuesday.Tuesday.There will be a funn-could Monday, both days. It'll be in mostly sunny Thursday. Take a look at his desk. It's pretty low. It won't be mid. There'll be five days. There'd be a full moon out here. There's a high of both days and a low of both nights. There''ll be eight days. Today's Thursday. Therely three days. They'll be at three days straight. There will be at five days either. The whole weekend. There´'ll be seven days. The Thursday is eight days each time. It will be in both days every Friday. The Saturday is at eight days either ends. The Wednesday is at seven days West. The Friday is at three weeks. Theursday is at both days either side. The Day is at five degrees. Theuesday. The weekend. The day is at six days. This Thursday is at four days. We have eight days already. The night is at zero. The Monday is at nine two Thursday. Theurday. The Sunday is at ten days. Now is at twelve days.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+===== BATCH 5 =====
+
+Sample 17:
+True Emotion: confused
+True Transcription: We are going to eat our way through Pennsylvania completely.
+Predicted Transcription: We are going to eat our way through Pennsylvania completely. completely. We are going too eat our Way through Pennsylvania. completelyilly! . . . we are going two eat our away through Pennsylvania company. yeah, it completely! .illy!
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 18:
+True Emotion: confused
+True Transcription: In Winston-Salem, today, there's a *very* low chance of snow.
+Predicted Transcription: In Winston-Salem, today, there's a very low chance of snow. Huh? Oh. No. I mean, Winston-Same. Today, there’s a very small chance of, snow. Oh! How? oh. Oh. Oh, no. No, no, no... In Winston- Salem, too, it isn't snow. No! Oh, oh. oh. No... Oh, Oh, so I'm going to play with it. Oh oh. I know. Oh hi, miss. And when Winston- sale on today, it is a very high chance of zero. oh, oh, yeah. snow. oh oh.oh, no oh.. oh Oh. oh... oh.Ah. oh? oh, no my. oh you. oh uh. oh . oh.Oh. oh of. oh do. oh and oh. no. oh bye. oh I. oh how. oh know. oh So. oh so. oh d. oh that. oh com. oh dot. oh um. oh i. oh two. oh my. Oh my. I. Oh com. I love it. oh r. oh hi. oh n. oh s. oh day. oh it
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: essentials
+
+Sample 19:
+True Emotion: confused
+True Transcription: You're crazy!
+Predicted Transcription: You're crazy! You're crazy. You're easy. Get a look at the music video. You are crazy! What do you know? uh New York. You know. You too. You's a great guy. You've got a high of nineteen and you're like, um, uh you're crazy too. uh. You need to play like that. I mean, uh go to your computer. uh...your crazy. uh your. uh crazy. um. uh you know. uh uh. uh do. uh V-okay. uh Do. um uh. my. um your. um dot com. uh um uh uh uh Newcom. uh and uh. um r-okay get. uh Z. uh O. uh my. uh E. uh b. U.. uh dot. uh hi. yeah. uh W. V.. um you. uh I. uh Y. uh J. uh T. uh th. uh M. uh B. uh R. uh com.. W. uh oh. uh X. m. Uy. uh F. uh U. uh D. U about. uh S. uh m. M. Z. T. T uh. M W. M and U. Q
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
+Sample 20:
+True Emotion: confused
+True Transcription: What about this History of Photography?
+Predicted Transcription: What about this History of Photography? Some of the History of photography.
+
+Segment-by-segment analysis:
+  Segment 1 (0.0s - 30.0s):
+    Text: ""
+    Predicted Emotion: confused
+
