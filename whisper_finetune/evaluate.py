@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score, classification_report 
 
 from model import EmotionWhisperModel, load_emotion_whisper_model # MODIFIED: Ensure load_emotion_whisper_model is imported
-from transformers import WhisperProcessor
+from transformers import WhisperProcessor, GenerationConfig
 # from huggingface_hub import hf_hub_download # Not strictly needed if args.model_path is always local for weights
 from dataset import create_dataset, SIMPLE_STYLES 
 
@@ -21,72 +21,64 @@ def parse_args():
 
 
 def get_segments_with_timestamps(processor, model, input_features, device):
-    """Generate transcription with timestamps and extract segments"""
-    
-    forced_decoder_ids = None
-    try:
-        # Try newer API
-        forced_decoder_ids = processor.get_decoder_prompt_ids(
-            task="transcribe", 
-            language="en", 
-            return_timestamps=True
-        )
-        print("Successfully used get_decoder_prompt_ids with return_timestamps=True")
-    except TypeError:
-        # Fall back to older API
-        print("Warning: processor.get_decoder_prompt_ids does not support 'return_timestamps'. Using fallback.")
-        forced_decoder_ids = processor.get_decoder_prompt_ids(
-            task="transcribe", 
-            language="en"
-        )
-        # Enable timestamps via tokenizer if possible
-        if hasattr(processor.tokenizer, "set_prefix_tokens"):
-            try:
-                processor.tokenizer.set_prefix_tokens(predict_timestamps=True)
-                print("Successfully called processor.tokenizer.set_prefix_tokens(predict_timestamps=True)")
-            except Exception as e:
-                print(f"Warning: Could not set_prefix_tokens: {e}")
-        else:
-            print("Warning: processor.tokenizer does not have set_prefix_tokens method. Timestamps might not be generated.")
+    """
+    Generate transcription (optionally with timestamps) and extract segments.
+    This version removes EVERY preset forced-decoder-id so Whisper can run
+    with its own defaults without triggering the conflict.
+    """
 
+    # ------------------------------------------------------------------ #
+    # 1) make sure the tokenizer knows where timestamp tokens start
+    # ------------------------------------------------------------------ #
+    if not hasattr(processor.tokenizer, "timestamp_begin"):
+        processor.tokenizer.timestamp_begin = 50364          # hard-coded HF default
+        print("Manually set timestamp_begin to 50364")
+
+    # ------------------------------------------------------------------ #
+    # 2) ***THE REAL FIX*** – clear every forced-id field the library checks
+    # ------------------------------------------------------------------ #
+    model.whisper.config.forced_decoder_ids          = None      # main config
+    model.whisper.generation_config.forced_decoder_ids = None    # generation cfg
+
+    # ------------------------------------------------------------------ #
+    # 3) run the absolutely minimal generation call
+    # ------------------------------------------------------------------ #
     with torch.no_grad():
-        outputs = model.whisper.generate(
-            input_features.to(device), 
-            forced_decoder_ids=forced_decoder_ids, 
-            return_dict_in_generate=True,
-            output_hidden_states=True,
-            max_length=256
+        # pass forced_decoder_ids=None explicitly (harmless, reinforces the fix)
+        sequences = model.whisper.generate(
+            input_features.to(device),
+            forced_decoder_ids=None,          # <<— guarantees no duplication
+            max_length=256,
+            return_dict_in_generate=False     # simplest output (tensor)
         )
-    
-    # Process generated sequences
-    timestamp_tokens = []
-    segments = []
-    
-    for batch_idx, seq in enumerate(outputs.sequences):
-        tokens = seq.cpu().numpy()
-        seq_timestamps = []
-        seq_segments = []
-        segment_start = 0.0
-        
-        # Process tokens to extract timestamps
-        for i, token_id in enumerate(tokens):
-            # Check for timestamp tokens
-            if token_id >= processor.tokenizer.timestamp_begin:
-                timestamp_value = float(token_id - processor.tokenizer.timestamp_begin) / 50.0
-                if timestamp_value > segment_start:
-                    seq_segments.append({
-                        "text": processor.tokenizer.decode(seq[:i], skip_special_tokens=True).strip(),
-                        "start": segment_start,
-                        "end": timestamp_value
-                    })
-                    seq_timestamps.append(i)
-                segment_start = timestamp_value
-        
-        # Store results
-        segments.append(seq_segments)
-        timestamp_tokens.append(seq_timestamps)
-    
-    return segments, timestamp_tokens, outputs.sequences
+
+    # ------------------------------------------------------------------ #
+    # 4) post-process: find timestamp tokens and slice segments
+    # ------------------------------------------------------------------ #
+    timestamp_tokens, segments = [], []
+    for seq in sequences:
+        tokens          = seq.cpu().numpy()
+        ts_positions    = []
+        segs            = []
+        start_time      = 0.0
+
+        for i, tok_id in enumerate(tokens):
+            if tok_id >= processor.tokenizer.timestamp_begin:
+                t = float(tok_id - processor.tokenizer.timestamp_begin) / 50.0
+                if t > start_time:
+                    segs.append(
+                        dict(text   = processor.tokenizer.decode(
+                                   seq[:i], skip_special_tokens=True
+                               ).strip(),
+                             start  = start_time,
+                             end    = t))
+                    ts_positions.append(i)
+                start_time = t
+
+        segments.append(segs)
+        timestamp_tokens.append(ts_positions)
+
+    return segments, timestamp_tokens, sequences
 
 def main(): 
     args = parse_args()
@@ -251,7 +243,7 @@ def main():
                     with open(prediction_log_path, "a") as log_file:
                         log_file.write(f"Skipping sample {batch_idx * args.batch_size + b + 1} due to no segments even after fallback.\n")
                     continue # Skip to next item in batch
-
+                
                 #run model with timestamp indices for segment-based prediction 
                 model_outputs = model(
                     input_features=input_features[b:b+1],
@@ -273,7 +265,7 @@ def main():
                     seq_emotion_logits = seq_emotion_logits_list[0] 
                     if seq_emotion_logits.dim() == 1: # only one segment 
                         seq_emotion_logits = seq_emotion_logits.unsqueeze(0)
-                    
+                
                     pred_emotions_for_sample = torch.argmax(seq_emotion_logits, dim=1).cpu().numpy().tolist()
 
                 # Check if number of predicted emotions matches number of segments
@@ -328,7 +320,7 @@ def main():
     else:
         accuracy = accuracy_score(all_true_emotions, all_pred_emotions)
         f1 = f1_score(all_true_emotions, all_pred_emotions, average="weighted", zero_division=0)
-        
+    
         # Ensure labels for classification_report are only those present in data
         present_labels = sorted(list(set(all_true_emotions + all_pred_emotions)))
         target_names_present = [idx_to_style.get(i, f"Unknown_{i}") for i in present_labels]
@@ -367,4 +359,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-        
+    
