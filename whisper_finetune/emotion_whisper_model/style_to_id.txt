@@ -5,7 +5,6 @@ enunciated: 3
 essentials: 4
 happy: 5
 laughing: 6
-longform: 7
-sad: 8
-singing: 9
-whisper: 10
+sad: 7
+singing: 8
+whisper: 9

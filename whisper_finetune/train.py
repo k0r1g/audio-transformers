@@ -75,6 +75,9 @@ def parse_args():
     # W&B parameters
     parser.add_argument("--wandb_project", type=str, default="emotion_whisper", help="Weights & Biases project name")
     parser.add_argument("--wandb_entity", type=str, default=None, help="Weights & Biases entity (username or team name)")
+    
+    # Hugging Face parameters
+    parser.add_argument("--hf_repo_id", type=str, default="Kogero/whisper_emotions", help="Hugging Face repository ID for model upload")
 
     
     return parser.parse_args()

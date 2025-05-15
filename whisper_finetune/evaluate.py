@@ -122,8 +122,63 @@ def main():
                 if not segments[b]:
                     continue 
                 
-                #get segment timestamps 
-                segment_timestamps = timestamp_tokens[b]
+                #run model with timestamp indices for segment-based prediction 
+                outputs = model(
+                    input_features=input_features[b:b+1],
+                    timestamp_indices=[timestamp_tokens[b]]
+                )
                 
+                #get emotion preidctions for each segment 
+                seq_emotion_logits = outputs["emotion_logits"][0] #first batch item 
+                if seq_emotion_logits.dim() == 1: #only one segment 
+                    seq_emotion_logits = seq_emotion_logits.unsqueeze(0)
                 
+                #get predicted emotions for each segment 
+                pred_emotions = torch.argmax(seq_emotion_logits, dim=1).cpu().numpy().tolist()
                 
+                #use sequence-level emotion as ground truth for all segements 
+                true_emotion = emotion_labels[b].item()   
+                true_emotions = [true_emotion] * len(pred_emotions)  
+                
+                #store results 
+                all_true_emotions.extend(true_emotions)
+                all_pred_emotions.extend(pred_emotions)         
+                total_segments += len(pred_emotions)
+    
+    #calculate metrics 
+    accuracy = accuracy_score(all_true_emotions, all_pred_emotions)
+    f1 = f1_score(all_true_emotions, all_pred_emotions, average="weighted")
+    
+    #get class names for report 
+    idx_to_style = {idx: style for style, idx in style_to_idx.items()}
+    
+    print(f"Total segments evaluated: {total_segments}")
+    print(f"Segment-level Emotion Classification Accuracy: {accuracy:.4f}")
+    print(f"Segment-level Emotion Classification F1 Score: {f1:.4f}")
+    
+    #generate classification report 
+    report = classification_report(
+        all_true_emotions, 
+        all_pred_emotions, 
+        labels=sorted(list(set(all_true_emotions + all_pred_emotions))),
+        target_names=[idx_to_style.get(i, f"Unknown_{i}") for i in sorted(list(set(all_true_emotions + all_pred_emotions)))],
+        digits = 3
+    )
+    
+    print("Classification Report:")
+    print(report)
+    
+    # Save results
+    with open(os.path.join(args.output_dir, "segment_evaluation.txt"), "w") as f:
+        f.write(f"Total segments evaluated: {total_segments}\n")
+        f.write(f"Segment-level Emotion Classification Accuracy: {accuracy:.4f}\n")
+        f.write(f"Segment-level Emotion Classification F1 Score: {f1:.4f}\n\n")
+        f.write("Detailed Classification Report:\n")
+        f.write(report)
+    
+    print(f"Results saved to {os.path.join(args.output_dir, 'segment_evaluation.txt')}")
+
+
+    if __name__ == "__main__":
+        main()
+        
