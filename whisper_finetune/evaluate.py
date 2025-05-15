@@ -39,40 +39,43 @@ def get_segments_with_timestamps(model, processor, input_features, device):
             task="transcribe",
             language="en",
 
-            # --------- make it emit timestamps ----------
-            predict_timestamps=True,          # <- forces timestamp tokens
-            return_timestamps=True,
-            return_segments=True,
+            # -------- make it emit timestamps (works on <4.40) --------
+            return_timestamps="generate",      # <- string, not bool
+            return_dict_in_generate=True,      # required to get .sequences/.segments
 
-            # --------- stop the repetition ----------
-            temperature=0.7,                  # small randomness
-            no_repeat_ngram_size=3,           # forbid 3-gram loops
-            compression_ratio_threshold=2.4,  # ban copy-pasta
-            repetition_penalty=1.1,           # soft penalty
+            # -------- tame repetition (unchanged) --------
+            temperature=0.7,
+            no_repeat_ngram_size=3,
+            compression_ratio_threshold=2.4,
+            repetition_penalty=1.1,
 
-            # --------- length & speed ----------
             max_new_tokens=256,
-            forced_decoder_ids=None,          # keep wiped
-            return_dict_in_generate=True,
+            forced_decoder_ids=None,
         )
 
-    segments_batch = out["segments"]        # length == batch size
-    sequences      = out["sequences"]
-
-    # Filter empty segments and create timestamp indices for each batch item
     filtered_segments_batch = []
     ts_idx = []
-    
-    for batch_segments in segments_batch:
-        # Only keep segments with non-empty text
-        filtered_segments = [s for s in batch_segments if s["text"].strip()]
-        filtered_segments_batch.append(filtered_segments)
-        
-        # Extract timestamp indices from non-empty segments
-        batch_ts_idx = [seg["tokens"][-1] for seg in filtered_segments]
-        ts_idx.append(batch_ts_idx)
 
-    return filtered_segments_batch, ts_idx, sequences
+    ts_begin = processor.tokenizer.timestamp_begin
+
+    for segs in out["segments"]:
+        good = []
+        idxs = []
+
+        for seg in segs:
+            # handle both dict and dataclass
+            text   = seg["text"]   if isinstance(seg, dict) else seg.text
+            tokens = seg["tokens"] if isinstance(seg, dict) else seg.tokens
+
+            if text.strip():               # skip empty/no-speech segments
+                good.append(seg)
+                # take last timestamp token in this segment
+                idxs.append(next(t for t in reversed(tokens) if t >= ts_begin))
+
+        filtered_segments_batch.append(good)
+        ts_idx.append(idxs)
+
+    return filtered_segments_batch, ts_idx, out["sequences"]
 
 def main(): 
     args = parse_args()
