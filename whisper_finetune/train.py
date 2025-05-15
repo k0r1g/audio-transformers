@@ -205,11 +205,11 @@ def train():
             emotion_logits = outputs["emotion_logits"]
             
             #calculate transcription loss 
-            shifted_logits = logits.contiguous()
-            shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels
-            
-            #calculate transcription loss 
-            transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))
+            prediction_logits = logits 
+            target_labels = labels[:, 1:].contiguous() 
+            flattened_predictions = prediction_logits.view(-1, prediction_logits.size(-1))
+            flattened_targets = target_labels.view(-1)
+            transcription_loss = transcription_loss_fn(flattened_predictions, flattened_targets)
             
             #calculate emotion loss total NOT per segment for training 
             emotion_loss = emotion_loss_fn(emotion_logits, emotion_labels)
@@ -279,12 +279,12 @@ def train():
                 logits = outputs["logits"]
                 emotion_logits = outputs["emotion_logits"]
                 
-                #calculate the transcription loss 
-                shifted_logits = logits.contiguous()
-                shifted_labels = labels[:, 1:].contiguous() if labels.size(1) > 1 else labels
-                
                 #calculate transcription loss 
-                transcription_loss = transcription_loss_fn(shifted_logits.view(-1, logits.size(-1)), shifted_labels.view(-1))
+                prediction_logits = logits 
+                target_labels = labels[:, 1:].contiguous() 
+                flattened_predictions = prediction_logits.view(-1, prediction_logits.size(-1))
+                flattened_targets = target_labels.view(-1)
+                transcription_loss = transcription_loss_fn(flattened_predictions, flattened_targets)
                 
                 #calculate emotion loss and accuracy 
                 # emotion_loss, emotion_correct, emotion_total = calculate_emotion_loss(emotion_logits, emotion_labels, emotion_loss_fn)

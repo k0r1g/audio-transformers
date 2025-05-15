@@ -1,18 +1,15 @@
 import torch 
 import torch.nn as nn 
-from transformers import WhisperPreTrainedModel, WhisperModel, WhisperConfig 
+from transformers import WhisperPreTrainedModel, WhisperForConditionalGeneration, WhisperConfig 
 from typing import Optional, Tuple, List, Dict, Any, Union 
 
 class EmotionWhisperModel(WhisperPreTrainedModel):
     """Whisper + emotion classification head"""
-    def __init__(self, config: WhisperConfig, num_emotions_classes: int = 26):
+    def __init__(self, config: WhisperConfig, num_emotions_classes: int = 10):
         super().__init__(config)
         
         #load whisper model components 
-        self.whisper = WhisperModel(config) #imports base encoder-decoder architecture without output projections 
-        
-        #original projection for transcription 
-        self.proj_out = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        self.whisper = WhisperForConditionalGeneration(config) #imports base encoder-decoder architecture without output projections 
         
         #projection for emotion classification 
         self.emotion_classifier = nn.Linear(config.d_model, num_emotions_classes)
@@ -75,14 +72,13 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
             decoder_input_ids=decoder_input_ids, 
             decoder_attention_mask=decoder_attention_mask, 
             return_dict=return_dict, 
+            output_hidden_states=True,
         )
         
-        # get decoder outputs 
-        hidden_states = outputs.last_hidden_state 
-        
-        # projection for transcription (token-level)
-        logits = self.proj_out(hidden_states)
-        
+        # get decoder logits  
+        logits = outputs.logits 
+        hidden_states = outputs.decoder_hidden_states[-1] #get last hidden states for emotion prediction
+    
         #extract segment representations and predict emotions 
         emotion_logits = None 
         if timestamp_indices is not None:
@@ -111,7 +107,7 @@ class EmotionWhisperModel(WhisperPreTrainedModel):
         return result 
        
 
-def load_emotion_whisper_model(num_emotions_classes=26):
+def load_emotion_whisper_model(num_emotions_classes=10):
     """Load pretrained whisper medium model and adds emotion classification head"""
     
     #load pretrained model and config 
@@ -126,11 +122,7 @@ def load_emotion_whisper_model(num_emotions_classes=26):
     model = EmotionWhisperModel(config, num_emotions_classes=num_emotions_classes)
     
     #load pretrained weights for the whisper components 
-    pretrained_model = WhisperModel.from_pretrained(model_id)
+    pretrained_model = WhisperForConditionalGeneration.from_pretrained(model_id)
     model.whisper.load_state_dict(pretrained_model.state_dict())
-    
-    #initialise projection layer with the pretrained weights if available 
-    if hasattr(pretrained_model, "proj_out"):
-        model.proj_out.load_state_dict(pretrained_model.proj_out.state_dict())
     
     return model, processor 
