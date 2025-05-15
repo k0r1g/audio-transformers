@@ -65,23 +65,28 @@ def get_segments_with_timestamps(model, processor, input_features, device):
         good, idxs = [], []
 
         for seg in segs:
-            # unify access
+            # --- unify access ---------------------------------------------------
             tokens = seg["tokens"] if isinstance(seg, dict) else seg.tokens
-            text   = (seg.get("text") if isinstance(seg, dict)
-                      else getattr(seg, "text", None))
-            # if "text" wasn't provided (old HF) → build it now
+            text   = seg.get("text") if isinstance(seg, dict) else getattr(seg, "text", None)
+
+            # if text missing → rebuild it
             if text is None:
-                content_tokens = [t for t in tokens if t < ts_begin]
-                text = processor.tokenizer.decode(content_tokens,
+                text_tokens = [t for t in tokens if t < ts_begin]
+                text = processor.tokenizer.decode(text_tokens,
                                                   skip_special_tokens=True).strip()
 
-            # skip empty/no-speech segments
+            # skip empty segments created by the old fallback code
             if not text:
                 continue
 
-            # keep segment and record last timestamp-token index
+            # --- find timestamp id; if missing, fall back to last token ----------
+            ts_id = next((t for t in reversed(tokens) if t >= ts_begin), None)
+            if ts_id is None:
+                # rare edge case: add synthetic timestamp
+                ts_id = tokens[-1]
+
             good.append(seg)
-            idxs.append(next(t for t in reversed(tokens) if t >= ts_begin))
+            idxs.append(ts_id)
 
         filtered_segments_batch.append(good)
         ts_idx.append(idxs)
