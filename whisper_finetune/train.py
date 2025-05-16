@@ -367,9 +367,23 @@ def train():
                     # Push to hub
                     if hasattr(args, 'hf_repo_id'):
                         api.create_repo(repo_id=args.hf_repo_id, exist_ok=True)
+                        
+                        # 1. Save generation config - check if it exists first
+                        if hasattr(model, 'whisper') and hasattr(model.whisper, 'generation_config') and model.whisper.generation_config is not None:
+                            model.whisper.generation_config.save_pretrained(model_path)
+                        else:
+                            # Create a default generation config if needed
+                            from transformers import GenerationConfig
+                            gen_config = GenerationConfig.from_pretrained("openai/whisper-tiny")
+                            gen_config.forced_decoder_ids = None
+                            gen_config.save_pretrained(model_path)
+                            print("Created and saved a default generation config")
+                        
+                        # 2. Upload files directly to the root of the repo
                         api.upload_folder(
                             folder_path=model_path,
                             repo_id=args.hf_repo_id,
+                            path_in_repo=".",
                             commit_message=f"Upload best model from epoch {epoch+1}"
                         )
                         print(f"Successfully pushed model to {args.hf_repo_id}")

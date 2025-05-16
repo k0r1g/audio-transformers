@@ -1,33 +1,21 @@
 
 
-Goal:
 
-Tues: we finish emotional detection text-to-speech 
-Wed: we fine-tune csm's text-to-speech 
-Thurs: we add a llm, build the speech-to-speech 
+2.20-3:
+- fix the huggingface upload issue. (change both the training script but dont retrain, just do the thing to fix what is on the repo)
+- then run evaluate on this 
 
+3-3.30: 
+- generate the inference script 
+- get the streamlit app done 
 
+3.30-4: 
+- work on the slides 
 
-Question, can this model also do emotion classification for translation not just transcription  
+pass the below to chat and get it to generate things: 
 
-
- 
- 10-11: 
- - do the evlaute script 
- - do the inference script 
- 
- 11-12:
- - train the whisper tiny model 
- - evaluate 
- - run inference 
- 
- during training: 
-
- - go back and add shapes everywhere 
- - add our test scripts 
-
-12-1: 
-- build streamlit 
-- deploy model on our streamlit 
-
-
+slide 1: on my task, and the expresso evaluation 
+slide 2: on the timestamps organisation 
+slide 3: on defining the inference task as different from the training task 
+slide 4: an aside on how much I dislike huggingface 
+slide 5: demo 
