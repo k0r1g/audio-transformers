@@ -2,14 +2,14 @@
 
 A machine learning project for audio analysis using transformer architectures. This repository contains two main components: **Urban Sound Classification** and **Emotion-Aware Whisper Fine-tuning**.
 
-## 🎯 Project Overview
+## Project Overview
 
 This project explores different approaches to audio understanding:
 
 1. **Urban Sound Classification**: A custom transformer-based model for classifying urban sounds from the UrbanSound8K dataset
 2. **Emotion-Aware Whisper**: Fine-tuning OpenAI's Whisper model to simultaneously perform speech transcription and emotion recognition
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 audio-transformers/
@@ -28,7 +28,7 @@ audio-transformers/
 └── requirements.txt      # Project dependencies
 ```
 
-## 🚀 Features
+## Features
 
 ### Urban Sound Classification
 - **Custom Architecture**: Hybrid CNN + Transformer model for audio classification
@@ -44,7 +44,7 @@ audio-transformers/
 - **Production Ready**: Includes evaluation scripts and inference utilities
 - **Flexible Architecture**: Supports different emotion label sets and segment durations
 
-## 📦 Installation
+## Installation
 
 1. **Clone the repository**:
 ```bash
@@ -64,7 +64,7 @@ echo "WANDB_KEY=your_wandb_key" >> .env
 echo "HF_ACCESS=your_huggingface_token" >> .env
 ```
 
-## 🎵 Urban Sound Classification
+## Urban Sound Classification
 
 ### Quick Start
 
@@ -91,7 +91,7 @@ The urban sound classifier uses a hybrid architecture:
 2. **Transformer Encoder**: Multi-head attention blocks for sequence modeling
 3. **CNN Classification Head**: Additional convolutional layers for final classification
 
-## 🎤 Emotion-Aware Whisper
+## Emotion-Aware Whisper
 
 ### Quick Start
 
@@ -137,7 +137,7 @@ The emotion-aware Whisper model extends the original Whisper architecture:
 - **Dual Loss**: Combines transcription and emotion classification losses
 - **Segment Processing**: Supports both sequence-level and segment-level emotion analysis
 
-## 📊 Datasets
+## Datasets
 
 ### Urban Sound Classification
 - **UrbanSound8K**: 10 urban sound categories
@@ -149,13 +149,13 @@ The emotion-aware Whisper model extends the original Whisper architecture:
 - **Flexible Labels**: 10 emotion classes
 - **Temporal Segmentation**: Automatic chunking for long audio files
 
-## 🧪 Experiments
+## Experiments
 
 Both modules include Jupyter notebooks for experimentation:
 - `urban_sounds/experiments.ipynb`: Explore urban sound data and model behavior
 - `whisper_finetune/experiments.ipynb`: Experiment with emotion recognition approaches
 
-## 📈 Monitoring & Evaluation
+## Monitoring & Evaluation
 
 ### Experiment Tracking
 - **Weights & Biases**: Automatic logging of training metrics
@@ -167,7 +167,7 @@ Both modules include Jupyter notebooks for experimentation:
 - **Emotion Recognition**: Per-emotion accuracy, segment-level performance
 - **Transcription**: WER (Word Error Rate) evaluation
 
-## 🤗 Model Sharing
+## Model Sharing
 
 Models can be automatically uploaded to Hugging Face Hub:
 
@@ -179,7 +179,7 @@ python train_classifier.py --upload_to_hub --hf_repo_id "your-username/urban-sou
 python train.py --hf_repo_id "your-username/emotion-whisper-model"
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 ```bash
@@ -192,7 +192,7 @@ HF_ACCESS=your_hugging_face_token
 - **Memory**: 8GB+ RAM recommended
 - **Storage**: ~5GB for datasets and models
 
-## 📚 Usage Examples
+## Usage Examples
 
 ### Urban Sound Classification
 ```python
